@@ -1,2 +1,10 @@
 # 기본 코드 소유자
 * @ydhappy
+
+# GitHub 협업 설정
+.github/ @ydhappy
+
+# 저장소 정책 문서
+README.md @ydhappy
+CONTRIBUTING.md @ydhappy
+SECURITY.md @ydhappy
