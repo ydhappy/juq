@@ -1,0 +1,53 @@
+# Operating systems
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors and IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.pfx
+*.p12
+secrets.*
+
+# Logs and temporary files
+*.log
+logs/
+tmp/
+temp/
+.cache/
+
+# Build and dependency outputs
+node_modules/
+dist/
+build/
+out/
+bin/
+obj/
+target/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Test and coverage outputs
+coverage/
+.coverage
+.pytest_cache/
+TestResults/
+
+# Local databases and backups
+*.db
+*.sqlite
+*.sqlite3
+*.bak
