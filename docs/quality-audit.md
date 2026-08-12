@@ -13,3 +13,7 @@
 ## Android APK 준비 상태
 
 현재 `SYSTEM_ALERT_WINDOW` 권한 선언, Android 설정 화면 이동, `eas.json`의 내부 배포용 APK 프로필, GitHub Actions의 Android APK 워크플로가 준비돼 있다. 다만 GitHub Actions에서 실제 EAS 빌드를 시작하려면 저장소 `EXPO_TOKEN` 비밀값이 필요하며, 다른 앱 위에 실제 창을 계속 표시하려면 JavaScript UI와 별개로 Android 네이티브 `WindowManager` 서비스가 구현돼야 한다.
+
+## 각도 기준
+
+측정 좌표와 SVG 눈금은 같은 기준을 사용해야 한다. Juq는 **화면의 위쪽을 북쪽 0°로 하고 시계 방향으로 각도를 증가**시키는 기준으로 통일한다. 따라서 오른쪽은 90°, 아래쪽은 180°, 왼쪽은 270°다.

@@ -15,7 +15,7 @@ export function snapAngle(currentAngle: number, direction: number, step: number)
 }
 
 export function pointToAngle(x: number, y: number, centerX: number, centerY: number) {
-  const radians = Math.atan2(y - centerY, x - centerX);
+  const radians = Math.atan2(x - centerX, centerY - y);
   return wrapAngle((radians * 180) / Math.PI);
 }
 

@@ -16,7 +16,7 @@ const ORANGE = "#FF9F1C";
 
 function pointAt(cx: number, cy: number, radius: number, angle: number) {
   const radians = (angle * Math.PI) / 180;
-  return { x: cx + radius * Math.cos(radians), y: cy + radius * Math.sin(radians) };
+  return { x: cx + radius * Math.sin(radians), y: cy - radius * Math.cos(radians) };
 }
 
 export function ProtractorOverlay({ center, size, selectedAngle }: ProtractorOverlayProps) {
@@ -40,6 +40,10 @@ export function ProtractorOverlay({ center, size, selectedAngle }: ProtractorOve
         {labels.map((angle) => {
           const label = pointAt(radius, radius, radius * 0.77, angle);
           return <SvgText key={`label-${angle}`} x={label.x} y={label.y + 4} fill={INK} fontSize={Math.max(10, size * 0.052)} fontWeight="700" textAnchor="middle">{wrapAngle(angle)}°</SvgText>;
+        })}
+        {[{ angle: 0, label: "N" }, { angle: 90, label: "E" }, { angle: 180, label: "S" }, { angle: 270, label: "W" }].map((direction) => {
+          const label = pointAt(radius, radius, radius * 0.57, direction.angle);
+          return <SvgText key={direction.label} x={label.x} y={label.y + 3} fill="#00C2D1" fontSize={Math.max(8, size * 0.035)} fontWeight="800" textAnchor="middle">{direction.label}</SvgText>;
         })}
         {selectedPoint ? <Line x1={radius} y1={radius} x2={selectedPoint.x} y2={selectedPoint.y} stroke={ORANGE} strokeWidth={3} strokeLinecap="round" /> : null}
         {selectedPoint ? <Circle cx={selectedPoint.x} cy={selectedPoint.y} r={Math.max(5, size * 0.028)} fill={ORANGE} stroke="#FFFFFF" strokeWidth={1.6} /> : null}
