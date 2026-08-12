@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
-Write-Host "[Juq 360] Preparing Android preview APK build..." -ForegroundColor Cyan
+Write-Host "[Juq 360] Preparing local project verification..." -ForegroundColor Cyan
 
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
   throw "Node.js 22 LTS is required. Install Node.js, then run this script again."
@@ -12,6 +12,7 @@ if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
 }
 
 pnpm install --frozen-lockfile
-npx eas-cli@latest build --platform android --profile preview
+pnpm check
 
-Write-Host "APK build request completed. Open the EAS link printed above to download the APK." -ForegroundColor Green
+Write-Host "Local dependency installation and TypeScript verification completed." -ForegroundColor Green
+Write-Host "This script performs local checks only and does not create an APK." -ForegroundColor Yellow

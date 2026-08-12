@@ -4,7 +4,7 @@ setlocal EnableExtensions
 cd /d "%~dp0"
 
 echo.
-echo [Juq 360] Preparing Android preview APK build...
+echo [Juq 360] Preparing local project verification...
 
 where node >nul 2>nul
 if errorlevel 1 (
@@ -27,16 +27,14 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo.
-echo Starting EAS preview APK build. Sign in when prompted.
-call npx eas-cli@latest build --platform android --profile preview
-
+call pnpm check
 if errorlevel 1 (
-  echo APK build request did not complete. Check Expo sign-in and EXPO_TOKEN settings.
+  echo TypeScript verification failed.
   pause
   exit /b 1
 )
 
 echo.
-echo APK build request completed. Open the EAS link printed above to download the APK.
+echo Local dependency installation and TypeScript verification completed.
+echo This script performs local checks only and does not create an APK.
 pause

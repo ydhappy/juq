@@ -53,7 +53,19 @@
 - [x] 북쪽 기준 방향별 측정 회귀 테스트와 Expo 빌드를 검증한다.
 - [x] 최신 Juq 소스와 APK 빌드 구성을 원격 juq 저장소에 커밋·업로드한다.
 - [x] 원격 기본 브랜치와 업로드된 커밋 상태를 확인한다.
-- [ ] Windows용 Juq 배포 폴더와 APK 빌드 실행 조건을 정의한다.
-- [ ] Windows용 APK 빌드·소스 동기화 스크립트와 안내 문서를 작성한다.
-- [ ] 최신 Juq 전체 소스와 빌드 구성을 Windows 배포 패키지로 묶는다.
-- [ ] 배포 패키지 구조와 APK 빌드 명령을 검증한다.
+- [x] Windows용 Juq 배포 폴더와 APK 빌드 실행 조건을 정의한다.
+- [x] Windows용 APK 빌드·소스 동기화 스크립트와 안내 문서를 작성한다.
+- [x] 최신 Juq 전체 소스와 빌드 구성을 Windows 배포 패키지로 묶는다.
+- [x] 배포 패키지 구조와 APK 빌드 명령을 검증한다.
+- [ ] 연결된 Windows 폴더의 접근 권한과 대상 경로를 확인한다.
+- [ ] Juq Windows 배포 패키지를 연결된 폴더에 배치한다.
+- [x] 배치된 설치·APK 빌드 실행 파일을 검증한다.
+- [x] Windows의 Node.js 22 LTS·pnpm 설치 상태와 설치 경로를 확인한다.
+- [x] Windows에 Node.js 22 LTS와 pnpm을 설치한다.
+- [ ] C:\test\Juq_360의 Node·pnpm·EAS APK 빌드 준비 상태를 검증한다.
+- [ ] Expo EAS 인증 실패 원인을 기록하고 토큰 기반 인증 준비 상태를 확인한다.
+- [ ] Expo Access Token 발급·Windows EXPO_TOKEN 등록 절차를 준비한다.
+- [ ] 토큰 인증 후 Juq APK 빌드 요청 가능 상태를 검증한다.
+- [x] Windows 배치·PowerShell 스크립트에서 Expo·EAS APK 빌드 명령을 제거한다.
+- [x] Windows 배포 안내를 로컬 의존성 설치·타입 검증 흐름으로 갱신한다.
+- [ ] 수정된 Windows 배포 스크립트와 패키지 무결성을 검증한다.
