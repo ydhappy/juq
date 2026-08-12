@@ -1,7 +1,7 @@
 import * as MediaLibrary from "expo-media-library";
 import { StatusBar } from "expo-status-bar";
-import { useMemo, useRef, useState } from "react";
-import { Alert, BackHandler, Modal, Platform, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { Alert, BackHandler, Modal, PanResponder, Platform, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { captureRef } from "react-native-view-shot";
 
 import { AnnotationLayer, type Mark, type MarkKind } from "@/components/annotation-layer";
@@ -14,6 +14,13 @@ type MenuMode = "tools" | "note" | null;
 
 const INK = "#0D1B2A";
 const PAPER = "#F7FAFC";
+const LONG_PRESS_MS = 430;
+
+function touchDistance(touches: readonly { pageX: number; pageY: number }[]) {
+  if (touches.length < 2) return 0;
+  const [first, second] = touches;
+  return Math.hypot(first.pageX - second.pageX, first.pageY - second.pageY);
+}
 
 export default function HomeScreen() {
   const { width, height } = useWindowDimensions();
@@ -29,6 +36,12 @@ export default function HomeScreen() {
   const [isSavingCapture, setIsSavingCapture] = useState(false);
   const moveOrigin = useRef<Center>(center);
   const pinchOriginScale = useRef(scale);
+  const gestureStart = useRef<Center>({ x: 0, y: 0 });
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPress = useRef(false);
+  const didMove = useRef(false);
+  const didPinch = useRef(false);
+  const pinchStartDistance = useRef(0);
   const workspaceRef = useRef<View>(null);
   const protractorSize = workspaceSize * scale;
   const centerForWorkspace = useMemo(
@@ -39,40 +52,95 @@ export default function HomeScreen() {
     [center, protractorSize, workspaceSize],
   );
 
-  const measureAtWorkspacePoint = (x: number, y: number) => {
+  const clearLongPress = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const measureAtWorkspacePoint = useCallback((x: number, y: number) => {
+    if (!overlayVisible) return;
     setSelectedAngle(workspacePointToAngle(x, y, centerForWorkspace.x, centerForWorkspace.y));
-  };
+  }, [centerForWorkspace.x, centerForWorkspace.y, overlayVisible]);
 
-  const handleOverlayTap = (localX: number, localY: number) => {
-    measureAtWorkspacePoint(centerForWorkspace.x - protractorSize / 2 + localX, centerForWorkspace.y - protractorSize / 2 + localY);
-  };
-
-  const handleMoveStart = () => {
-    moveOrigin.current = centerForWorkspace;
-  };
-
-  const handleMove = (dx: number, dy: number) => {
-    setCenter({
-      x: clampNumber(moveOrigin.current.x + dx, protractorSize * 0.24, workspaceSize - protractorSize * 0.24),
-      y: clampNumber(moveOrigin.current.y + dy, protractorSize * 0.24, workspaceSize - protractorSize * 0.24),
-    });
-  };
-
-  const handleScaleStart = () => {
-    pinchOriginScale.current = scale;
-  };
-
-  const handleScale = (startDistance: number, currentDistance: number) => {
-    setScale(scaleFromPinch(pinchOriginScale.current, startDistance, currentDistance));
-  };
-
-  const handleLongPress = (localX: number, localY: number) => {
-    setMenuPoint({
-      x: clampNumber(centerForWorkspace.x - protractorSize / 2 + localX, 10, workspaceSize - 10),
-      y: clampNumber(centerForWorkspace.y - protractorSize / 2 + localY, 10, workspaceSize - 10),
-    });
+  const showMenuAt = useCallback((x: number, y: number) => {
+    setMenuPoint({ x: clampNumber(x, 10, workspaceSize - 10), y: clampNumber(y, 10, workspaceSize - 10) });
     setMenuMode("tools");
-  };
+  }, [workspaceSize]);
+
+  const workspacePanResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: (event) => {
+          const firstTouch = event.nativeEvent.touches[0];
+          gestureStart.current = { x: event.nativeEvent.locationX, y: event.nativeEvent.locationY };
+          didLongPress.current = false;
+          didMove.current = false;
+          didPinch.current = false;
+          const initialDistance = touchDistance(event.nativeEvent.touches);
+          pinchStartDistance.current = initialDistance;
+          if (initialDistance > 0) {
+            didPinch.current = true;
+            pinchOriginScale.current = scale;
+            return;
+          }
+          clearLongPress();
+          longPressTimer.current = setTimeout(() => {
+            if (!didMove.current && !didPinch.current) {
+              didLongPress.current = true;
+              showMenuAt(gestureStart.current.x, gestureStart.current.y);
+            }
+          }, LONG_PRESS_MS);
+          if (!firstTouch) clearLongPress();
+        },
+        onPanResponderMove: (event, gesture) => {
+          const currentDistance = touchDistance(event.nativeEvent.touches);
+          if (currentDistance > 0) {
+            clearLongPress();
+            didPinch.current = true;
+            if (pinchStartDistance.current === 0) {
+              pinchStartDistance.current = currentDistance;
+              pinchOriginScale.current = scale;
+              return;
+            }
+            setScale(scaleFromPinch(pinchOriginScale.current, pinchStartDistance.current, currentDistance));
+            return;
+          }
+          if (Math.abs(gesture.dx) > 5 || Math.abs(gesture.dy) > 5) {
+            clearLongPress();
+            if (!didMove.current) {
+              didMove.current = true;
+              moveOrigin.current = centerForWorkspace;
+            }
+          }
+          if (didMove.current && overlayVisible) {
+            setCenter({
+              x: clampNumber(moveOrigin.current.x + gesture.dx, protractorSize * 0.24, workspaceSize - protractorSize * 0.24),
+              y: clampNumber(moveOrigin.current.y + gesture.dy, protractorSize * 0.24, workspaceSize - protractorSize * 0.24),
+            });
+          }
+        },
+        onPanResponderRelease: (event, gesture) => {
+          clearLongPress();
+          if (!didLongPress.current && !didMove.current && !didPinch.current && Math.abs(gesture.dx) < 5 && Math.abs(gesture.dy) < 5) {
+            measureAtWorkspacePoint(event.nativeEvent.locationX, event.nativeEvent.locationY);
+          }
+          didMove.current = false;
+          didPinch.current = false;
+          pinchStartDistance.current = 0;
+        },
+        onPanResponderTerminate: () => {
+          clearLongPress();
+          didMove.current = false;
+          didPinch.current = false;
+          pinchStartDistance.current = 0;
+        },
+      }),
+    [centerForWorkspace, measureAtWorkspacePoint, overlayVisible, protractorSize, scale, showMenuAt, workspaceSize],
+  );
 
   const addMark = (kind: MarkKind, text?: string) => {
     setMarks((current) => [...current, { id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, kind, x: menuPoint.x, y: menuPoint.y, text }]);
@@ -136,30 +204,12 @@ export default function HomeScreen() {
           <Text style={styles.measureValue}>{selectedAngle === null ? "—°" : `${Math.round(selectedAngle)}°`}</Text>
         </View>
 
-        <View ref={workspaceRef} collapsable={false} style={[styles.workspace, { width: workspaceSize, height: workspaceSize }]}>
-          <Pressable
-            onPress={(event) => measureAtWorkspacePoint(event.nativeEvent.locationX, event.nativeEvent.locationY)}
-            onLongPress={(event) => { setMenuPoint({ x: event.nativeEvent.locationX, y: event.nativeEvent.locationY }); setMenuMode("tools"); }}
-            delayLongPress={430}
-            style={StyleSheet.absoluteFill}
-          />
-          {overlayVisible ? (
-            <ProtractorOverlay
-              center={centerForWorkspace}
-              size={protractorSize}
-              selectedAngle={selectedAngle}
-              onMoveStart={handleMoveStart}
-              onMove={handleMove}
-              onScaleStart={handleScaleStart}
-              onScale={handleScale}
-              onTap={handleOverlayTap}
-              onLongPress={handleLongPress}
-            />
-          ) : null}
+        <View ref={workspaceRef} collapsable={false} {...workspacePanResponder.panHandlers} style={[styles.workspace, { width: workspaceSize, height: workspaceSize }]}>
+          {overlayVisible ? <ProtractorOverlay center={centerForWorkspace} size={protractorSize} selectedAngle={selectedAngle} /> : null}
           <AnnotationLayer marks={marks} />
         </View>
 
-        <Text style={styles.gestureHint}>{overlayVisible ? "화면 터치: 각도 · 드래그: 이동 · 두 손가락: 확대 · 길게 터치: 메뉴" : "오버레이가 삭제되었습니다. 길게 터치해 메뉴에서 표시하세요."}</Text>
+        <Text style={styles.gestureHint}>{overlayVisible ? "화면 어디든 터치: 각도 · 드래그: 이동 · 두 손가락: 확대 · 길게 터치: 메뉴" : "오버레이가 삭제되었습니다. 길게 터치해 메뉴에서 표시하세요."}</Text>
       </View>
 
       <Modal visible={menuMode !== null} transparent animationType="fade" onRequestClose={() => setMenuMode(null)}>
