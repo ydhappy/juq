@@ -29,6 +29,7 @@ export default function HomeScreen() {
   const [center, setCenter] = useState<Center>({ x: workspaceSize / 2, y: workspaceSize / 2 });
   const [selectedAngle, setSelectedAngle] = useState<number | null>(null);
   const [overlayVisible, setOverlayVisible] = useState(true);
+  const [overlayLocked, setOverlayLocked] = useState(false);
   const [menuMode, setMenuMode] = useState<MenuMode>(null);
   const [menuPoint, setMenuPoint] = useState<Center>({ x: workspaceSize / 2, y: workspaceSize / 2 });
   const [noteText, setNoteText] = useState("");
@@ -101,6 +102,7 @@ export default function HomeScreen() {
           if (currentDistance > 0) {
             clearLongPress();
             didPinch.current = true;
+            if (overlayLocked) return;
             if (pinchStartDistance.current === 0) {
               pinchStartDistance.current = currentDistance;
               pinchOriginScale.current = scale;
@@ -111,12 +113,12 @@ export default function HomeScreen() {
           }
           if (Math.abs(gesture.dx) > 5 || Math.abs(gesture.dy) > 5) {
             clearLongPress();
-            if (!didMove.current) {
+            if (!didMove.current && !overlayLocked) {
               didMove.current = true;
               moveOrigin.current = centerForWorkspace;
             }
           }
-          if (didMove.current && overlayVisible) {
+          if (didMove.current && overlayVisible && !overlayLocked) {
             setCenter({
               x: clampNumber(moveOrigin.current.x + gesture.dx, protractorSize * 0.24, workspaceSize - protractorSize * 0.24),
               y: clampNumber(moveOrigin.current.y + gesture.dy, protractorSize * 0.24, workspaceSize - protractorSize * 0.24),
@@ -139,7 +141,7 @@ export default function HomeScreen() {
           pinchStartDistance.current = 0;
         },
       }),
-    [centerForWorkspace, measureAtWorkspacePoint, overlayVisible, protractorSize, scale, showMenuAt, workspaceSize],
+    [centerForWorkspace, measureAtWorkspacePoint, overlayLocked, overlayVisible, protractorSize, scale, showMenuAt, workspaceSize],
   );
 
   const addMark = (kind: MarkKind, text?: string) => {
@@ -151,12 +153,14 @@ export default function HomeScreen() {
   const placeOverlayAtCenter = () => {
     setCenter({ x: workspaceSize / 2, y: workspaceSize / 2 });
     setOverlayVisible(true);
+    setOverlayLocked(false);
     setSelectedAngle(null);
     setMenuMode(null);
   };
 
   const removeOverlay = () => {
     setOverlayVisible(false);
+    setOverlayLocked(false);
     setSelectedAngle(null);
     setMenuMode(null);
   };
@@ -202,6 +206,7 @@ export default function HomeScreen() {
           <Text style={styles.brand}>Juq 360</Text>
           <Text style={styles.measureLabel}>측정 각도</Text>
           <Text style={styles.measureValue}>{selectedAngle === null ? "—°" : `${Math.round(selectedAngle)}°`}</Text>
+          {overlayLocked ? <View style={styles.lockBadge}><Text style={styles.lockBadgeText}>오버레이 잠금</Text></View> : null}
         </View>
 
         <View ref={workspaceRef} collapsable={false} {...workspacePanResponder.panHandlers} style={[styles.workspace, { width: workspaceSize, height: workspaceSize }]}>
@@ -209,7 +214,7 @@ export default function HomeScreen() {
           <AnnotationLayer marks={marks} />
         </View>
 
-        <Text style={styles.gestureHint}>{overlayVisible ? "화면 어디든 터치: 각도 · 드래그: 이동 · 두 손가락: 확대 · 길게 터치: 메뉴" : "오버레이가 삭제되었습니다. 길게 터치해 메뉴에서 표시하세요."}</Text>
+        <Text style={styles.gestureHint}>{overlayVisible ? overlayLocked ? "잠금됨: 측정만 가능 · 길게 터치해 해제" : "화면 어디든 터치: 각도 · 드래그: 이동 · 두 손가락: 확대 · 길게 터치: 메뉴" : "오버레이가 삭제되었습니다. 길게 터치해 메뉴에서 표시하세요."}</Text>
       </View>
 
       <Modal visible={menuMode !== null} transparent animationType="fade" onRequestClose={() => setMenuMode(null)}>
@@ -227,6 +232,9 @@ export default function HomeScreen() {
                   <Pressable onPress={() => void saveCapture()} style={({ pressed }) => [styles.menuAction, pressed && styles.pressed]}><Text style={styles.menuActionText}>{isSavingCapture ? "저장 중" : "캡처"}</Text></Pressable>
                   <Pressable onPress={placeOverlayAtCenter} style={({ pressed }) => [styles.menuAction, pressed && styles.pressed]}><Text style={styles.menuActionText}>가운데</Text></Pressable>
                   <Pressable onPress={overlayVisible ? removeOverlay : placeOverlayAtCenter} style={({ pressed }) => [styles.menuAction, styles.exitAction, pressed && styles.pressed]}><Text style={[styles.menuActionText, styles.exitActionText]}>{overlayVisible ? "삭제" : "표시"}</Text></Pressable>
+                </View>
+                <View style={styles.menuRow}>
+                  <Pressable onPress={() => { setOverlayLocked((current) => !current); setMenuMode(null); }} style={({ pressed }) => [styles.menuAction, overlayLocked && styles.lockAction, pressed && styles.pressed]}><Text style={[styles.menuActionText, overlayLocked && styles.lockActionText]}>{overlayLocked ? "잠금 해제" : "오버레이 잠금"}</Text></Pressable>
                 </View>
                 <View style={styles.menuRow}>
                   <Pressable onPress={closeApp} style={({ pressed }) => [styles.menuAction, styles.exitAction, pressed && styles.pressed]}><Text style={[styles.menuActionText, styles.exitActionText]}>앱 끄기</Text></Pressable>
@@ -253,6 +261,8 @@ const styles = StyleSheet.create({
   brand: { color: "rgba(247,250,252,0.66)", fontSize: 13, fontWeight: "800", letterSpacing: 1.1 },
   measureLabel: { color: "rgba(247,250,252,0.68)", fontSize: 12, fontWeight: "700", marginTop: 7, letterSpacing: 0.6 },
   measureValue: { color: PAPER, fontSize: 54, lineHeight: 61, fontWeight: "800", letterSpacing: -1.8 },
+  lockBadge: { borderRadius: 9, backgroundColor: "rgba(255,159,28,0.20)", borderWidth: 1, borderColor: "rgba(255,159,28,0.72)", marginTop: 3, paddingHorizontal: 8, paddingVertical: 3 },
+  lockBadgeText: { color: "#FFB84D", fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
   workspace: { position: "relative", overflow: "visible", backgroundColor: "transparent" },
   gestureHint: { color: "rgba(247,250,252,0.72)", fontSize: 10, lineHeight: 14, fontWeight: "700", textAlign: "center", paddingHorizontal: 12 },
   modalBackdrop: { flex: 1, justifyContent: "flex-end", alignItems: "center", backgroundColor: "rgba(0,0,0,0.20)", paddingBottom: 28 },
@@ -263,6 +273,8 @@ const styles = StyleSheet.create({
   menuActionText: { color: INK, fontSize: 12, fontWeight: "800" },
   exitAction: { borderColor: "#F3B5B1", backgroundColor: "#FFF5F4" },
   exitActionText: { color: "#C83E37" },
+  lockAction: { borderColor: "#E1AC50", backgroundColor: "#FFF7E8" },
+  lockActionText: { color: "#9C6100" },
   noteInput: { minHeight: 68, maxHeight: 92, borderRadius: 10, borderWidth: 1, borderColor: "#D4DEE4", backgroundColor: "#FFFFFF", color: INK, fontSize: 14, lineHeight: 19, paddingHorizontal: 10, paddingVertical: 8, textAlignVertical: "top" },
   saveNoteButton: { minHeight: 38, borderRadius: 10, backgroundColor: INK, alignItems: "center", justifyContent: "center", marginTop: 8 },
   saveNoteText: { color: PAPER, fontSize: 13, fontWeight: "800" },
