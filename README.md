@@ -30,4 +30,4 @@ Juq는 투명한 0~360도 각도기 오버레이, 짧은 터치 방향 측정, �
 
 ## Android APK 빌드
 
-`main` 브랜치에 푸시하거나 Actions 탭에서 **Build Android APK** 워크플로를 수동 실행하면 EAS의 `preview` 프로필로 APK 빌드를 요청합니다. GitHub Actions에서 빌드를 실행하려면 저장소 **Settings → Secrets and variables → Actions**에 Expo 계정에서 생성한 `EXPO_TOKEN`을 추가해야 합니다. 빌드가 완료되면 EAS 빌드 페이지에서 APK를 내려받을 수 있습니다.
+`main` 브랜치에 푸시하거나 Actions 탭에서 **Build Android APK** 워크플로를 수동 실행하면 EAS의 `preview` 프로필로 APK 빌드를 요청합니다. GitHub Actions에서 빌드를 실행하려면 저장소 **Settings → Secrets and variables → Actions**에 Expo 계정에서 생성한 `EXPO_TOKEN`을 추가해야 합니다. 워크플로는 첫 실행에 EAS 프로젝트를 자동 연결한 뒤 APK 빌드를 요청합니다. 빌드가 완료되면 EAS 빌드 페이지에서 APK를 내려받을 수 있습니다.
