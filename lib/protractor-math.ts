@@ -13,3 +13,8 @@ export function clampNumber(value: number, minimum: number, maximum: number) {
 export function snapAngle(currentAngle: number, direction: number, step: number) {
   return wrapAngle(currentAngle + direction * step);
 }
+
+export function pointToAngle(x: number, y: number, centerX: number, centerY: number) {
+  const radians = Math.atan2(y - centerY, x - centerX);
+  return wrapAngle((radians * 180) / Math.PI);
+}

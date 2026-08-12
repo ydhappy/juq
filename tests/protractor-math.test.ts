@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { angleDifference, clampNumber, snapAngle, wrapAngle } from "../lib/protractor-math";
+import { angleDifference, clampNumber, pointToAngle, snapAngle, wrapAngle } from "../lib/protractor-math";
 
 describe("각도기 수학", () => {
   it("임의의 각도를 0도 이상 360도 미만 범위로 정규화한다", () => {
@@ -20,5 +20,12 @@ describe("각도기 수학", () => {
     expect(snapAngle(2, -1, 5)).toBe(357);
     expect(clampNumber(5, 10, 40)).toBe(10);
     expect(clampNumber(55, 10, 40)).toBe(40);
+  });
+
+  it("화면 터치 위치를 화면 좌표 기준 0~360도 각도로 변환한다", () => {
+    expect(pointToAngle(20, 10, 10, 10)).toBe(0);
+    expect(pointToAngle(10, 20, 10, 10)).toBe(90);
+    expect(pointToAngle(0, 10, 10, 10)).toBe(180);
+    expect(pointToAngle(10, 0, 10, 10)).toBe(270);
   });
 });

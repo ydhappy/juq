@@ -11,8 +11,11 @@ interface ProtractorOverlayProps {
   baseAngle: number;
   measureAngle: number;
   opacity: number;
+  interactionMode: "move" | "measure" | "passive";
+  measurementStep: "base" | "measure";
   onMoveStart: () => void;
   onMove: (dx: number, dy: number) => void;
+  onMeasureTouch: (x: number, y: number) => void;
 }
 
 const CYAN = "#00C2D1";
@@ -39,14 +42,26 @@ export function ProtractorOverlay({
   baseAngle,
   measureAngle,
   opacity,
+  interactionMode,
+  measurementStep,
   onMoveStart,
   onMove,
+  onMeasureTouch,
 }: ProtractorOverlayProps) {
   const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > 2 || Math.abs(gesture.dy) > 2,
-    onPanResponderGrant: onMoveStart,
-    onPanResponderMove: (_, gesture) => onMove(gesture.dx, gesture.dy),
+    onStartShouldSetPanResponder: () => interactionMode !== "passive",
+    onMoveShouldSetPanResponder: (_, gesture) => interactionMode === "move" && (Math.abs(gesture.dx) > 2 || Math.abs(gesture.dy) > 2),
+    onPanResponderGrant: () => {
+      if (interactionMode === "move") onMoveStart();
+    },
+    onPanResponderMove: (_, gesture) => {
+      if (interactionMode === "move") onMove(gesture.dx, gesture.dy);
+    },
+    onPanResponderRelease: (event) => {
+      if (interactionMode === "measure") {
+        onMeasureTouch(event.nativeEvent.locationX, event.nativeEvent.locationY);
+      }
+    },
   });
 
   const radius = size / 2;
@@ -71,6 +86,7 @@ export function ProtractorOverlay({
           opacity,
         },
       ]}
+      pointerEvents={interactionMode === "passive" ? "none" : "auto"}
     >
       <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <Circle cx={radius} cy={radius} r={radius - 3} fill="rgba(247,250,252,0.86)" stroke={INK} strokeWidth={2.5} />
@@ -118,7 +134,7 @@ export function ProtractorOverlay({
         <Line x1={radius} y1={radius} x2={measureEnd.x} y2={measureEnd.y} stroke={ORANGE} strokeWidth={4} strokeLinecap="round" />
         <Circle cx={baselineEnd.x} cy={baselineEnd.y} r={Math.max(6, size * 0.035)} fill={CYAN} stroke="#FFFFFF" strokeWidth={2} />
         <Circle cx={measureEnd.x} cy={measureEnd.y} r={Math.max(6, size * 0.035)} fill={ORANGE} stroke="#FFFFFF" strokeWidth={2} />
-        <Circle cx={radius} cy={radius} r={centerRadius} fill={INK} stroke="#FFFFFF" strokeWidth={2.5} />
+        <Circle cx={radius} cy={radius} r={centerRadius} fill={interactionMode === "measure" ? (measurementStep === "base" ? CYAN : ORANGE) : INK} stroke="#FFFFFF" strokeWidth={2.5} />
         <Line x1={radius - centerRadius * 0.58} y1={radius} x2={radius + centerRadius * 0.58} y2={radius} stroke="#FFFFFF" strokeWidth={1.5} />
         <Line x1={radius} y1={radius - centerRadius * 0.58} x2={radius} y2={radius + centerRadius * 0.58} stroke="#FFFFFF" strokeWidth={1.5} />
       </Svg>
