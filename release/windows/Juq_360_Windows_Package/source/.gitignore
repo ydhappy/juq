@@ -1,0 +1,70 @@
+# Dependencies and build output
+node_modules/
+dist/
+build/
+out/
+web-build/
+.cache/
+
+# Expo and native generated folders
+.expo/
+expo-env.d.ts
+/ios
+/android
+.metro-health-check*
+
+# Environment variables, keys, and local secrets
+.env
+.env.*
+!.env.example
+*.jks
+*.p8
+*.p12
+*.key
+*.pem
+*.pfx
+*.mobileprovision
+secrets.*
+
+# Logs and temporary files
+logs/
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+tmp/
+temp/
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Language and test output
+*.tsbuildinfo
+coverage/
+.coverage
+.pytest_cache/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local data and archives
+*.db
+*.sqlite
+*.sqlite3
+*.bak
+*.tgz
+*.tar.gz
+*.orig.*
+
+# Webdev local metadata
+.webdev/
+.project-config.json
+app-example

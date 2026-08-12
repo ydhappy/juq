@@ -1,0 +1,39 @@
+name: 버그 보고
+about: 재현 가능한 오류나 예외를 보고합니다.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 오류 설명
+      description: 발생한 문제를 명확하게 작성해 주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 절차
+      description: 오류를 재현할 수 있는 순서를 작성해 주세요.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 예상 동작
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 실행 환경
+      description: 운영체제, 버전, 실행 명령 등을 작성해 주세요.
+  - type: textarea
+    id: logs
+    attributes:
+      label: 로그 또는 화면
+      description: 민감정보를 제거한 로그와 화면을 첨부해 주세요.
