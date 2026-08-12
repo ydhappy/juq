@@ -9,14 +9,15 @@ type Point = { x: number; y: number };
 interface ProtractorOverlayProps {
   center: Point;
   size: number;
-  onMoveStart: () => void;
-  onMove: (dx: number, dy: number) => void;
+  selectedAngle: number | null;
   onScaleStart: () => void;
   onScale: (startDistance: number, currentDistance: number) => void;
-  onMovingChange: (isMoving: boolean) => void;
+  onTap: (x: number, y: number) => void;
+  onLongPress: (x: number, y: number) => void;
 }
 
 const INK = "#0D1B2A";
+const ORANGE = "#FF9F1C";
 
 function pointAt(cx: number, cy: number, radius: number, angle: number) {
   const radians = (angle * Math.PI) / 180;
@@ -29,15 +30,17 @@ function distanceBetweenTouches(touches: readonly { pageX: number; pageY: number
   return Math.hypot(first.pageX - second.pageX, first.pageY - second.pageY);
 }
 
-export function ProtractorOverlay({ center, size, onMoveStart, onMove, onScaleStart, onScale, onMovingChange }: ProtractorOverlayProps) {
+export function ProtractorOverlay({ center, size, selectedAngle, onScaleStart, onScale, onTap, onLongPress }: ProtractorOverlayProps) {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isLongPress = useRef(false);
+  const touchPoint = useRef({ x: size / 2, y: size / 2 });
+  const longPressTriggered = useRef(false);
   const pinchStartDistance = useRef(0);
   const radius = size / 2;
   const innerRadius = radius * 0.68;
   const centerRadius = Math.max(14, size * 0.07);
   const ticks = Array.from({ length: 72 }, (_, index) => index * 5);
   const labels = Array.from({ length: 12 }, (_, index) => index * 30);
+  const selectedPoint = selectedAngle === null ? null : pointAt(radius, radius, radius * 0.81, selectedAngle);
 
   const clearLongPress = () => {
     if (longPressTimer.current) {
@@ -55,21 +58,21 @@ export function ProtractorOverlay({ center, size, onMoveStart, onMove, onScaleSt
           const touchDistance = distanceBetweenTouches(event.nativeEvent.touches);
           if (touchDistance > 0) {
             pinchStartDistance.current = touchDistance;
+            onScaleStart();
             return;
           }
+          touchPoint.current = { x: event.nativeEvent.locationX, y: event.nativeEvent.locationY };
+          longPressTriggered.current = false;
           clearLongPress();
           longPressTimer.current = setTimeout(() => {
-            isLongPress.current = true;
-            onMoveStart();
-            onMovingChange(true);
-          }, 320);
+            longPressTriggered.current = true;
+            onLongPress(touchPoint.current.x, touchPoint.current.y);
+          }, 430);
         },
         onPanResponderMove: (event, gesture) => {
           const touchDistance = distanceBetweenTouches(event.nativeEvent.touches);
           if (touchDistance > 0) {
             clearLongPress();
-            isLongPress.current = false;
-            onMovingChange(false);
             if (pinchStartDistance.current === 0) {
               pinchStartDistance.current = touchDistance;
               onScaleStart();
@@ -78,26 +81,22 @@ export function ProtractorOverlay({ center, size, onMoveStart, onMove, onScaleSt
             onScale(pinchStartDistance.current, touchDistance);
             return;
           }
-
-          if (!isLongPress.current && (Math.abs(gesture.dx) > 4 || Math.abs(gesture.dy) > 4)) {
-            clearLongPress();
-          }
-          if (isLongPress.current) onMove(gesture.dx, gesture.dy);
+          if (Math.abs(gesture.dx) > 5 || Math.abs(gesture.dy) > 5) clearLongPress();
         },
-        onPanResponderRelease: () => {
+        onPanResponderRelease: (event, gesture) => {
+          const wasPinching = pinchStartDistance.current > 0;
           clearLongPress();
-          isLongPress.current = false;
           pinchStartDistance.current = 0;
-          onMovingChange(false);
+          if (!longPressTriggered.current && !wasPinching && Math.abs(gesture.dx) < 5 && Math.abs(gesture.dy) < 5) {
+            onTap(event.nativeEvent.locationX, event.nativeEvent.locationY);
+          }
         },
         onPanResponderTerminate: () => {
           clearLongPress();
-          isLongPress.current = false;
           pinchStartDistance.current = 0;
-          onMovingChange(false);
         },
       }),
-    [onMove, onMoveStart, onMovingChange, onScale, onScaleStart],
+    [onLongPress, onScale, onScaleStart, onTap],
   );
 
   return (
@@ -138,19 +137,13 @@ export function ProtractorOverlay({ center, size, onMoveStart, onMove, onScaleSt
         {labels.map((angle) => {
           const label = pointAt(radius, radius, radius * 0.77, angle);
           return (
-            <SvgText
-              key={`label-${angle}`}
-              x={label.x}
-              y={label.y + 4}
-              fill={INK}
-              fontSize={Math.max(10, size * 0.052)}
-              fontWeight="700"
-              textAnchor="middle"
-            >
+            <SvgText key={`label-${angle}`} x={label.x} y={label.y + 4} fill={INK} fontSize={Math.max(10, size * 0.052)} fontWeight="700" textAnchor="middle">
               {wrapAngle(angle)}°
             </SvgText>
           );
         })}
+        {selectedPoint ? <Line x1={radius} y1={radius} x2={selectedPoint.x} y2={selectedPoint.y} stroke={ORANGE} strokeWidth={4} strokeLinecap="round" /> : null}
+        {selectedPoint ? <Circle cx={selectedPoint.x} cy={selectedPoint.y} r={Math.max(6, size * 0.035)} fill={ORANGE} stroke="#FFFFFF" strokeWidth={2} /> : null}
         <Circle cx={radius} cy={radius} r={centerRadius} fill={INK} stroke="#FFFFFF" strokeWidth={2.5} />
         <Line x1={radius - centerRadius * 0.58} y1={radius} x2={radius + centerRadius * 0.58} y2={radius} stroke="#FFFFFF" strokeWidth={1.5} />
         <Line x1={radius} y1={radius - centerRadius * 0.58} x2={radius} y2={radius + centerRadius * 0.58} stroke="#FFFFFF" strokeWidth={1.5} />
