@@ -23,3 +23,7 @@ export function scaleFromPinch(originScale: number, startDistance: number, curre
   if (startDistance <= 0 || currentDistance <= 0) return clampNumber(originScale, 0.55, 1.18);
   return clampNumber(originScale * (currentDistance / startDistance), 0.55, 1.18);
 }
+
+export function workspacePointToAngle(x: number, y: number, overlayCenterX: number, overlayCenterY: number) {
+  return pointToAngle(x, y, overlayCenterX, overlayCenterY);
+}

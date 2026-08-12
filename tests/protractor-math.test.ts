@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { angleDifference, clampNumber, pointToAngle, scaleFromPinch, snapAngle, wrapAngle } from "../lib/protractor-math";
+import { angleDifference, clampNumber, pointToAngle, scaleFromPinch, snapAngle, workspacePointToAngle, wrapAngle } from "../lib/protractor-math";
 
 describe("각도기 수학", () => {
   it("임의의 각도를 0도 이상 360도 미만 범위로 정규화한다", () => {
@@ -33,5 +33,12 @@ describe("각도기 수학", () => {
     expect(scaleFromPinch(0.9, 100, 150)).toBeCloseTo(1.18);
     expect(scaleFromPinch(0.9, 100, 50)).toBeCloseTo(0.55);
     expect(scaleFromPinch(0.8, 100, 110)).toBeCloseTo(0.88);
+  });
+
+  it("작업면 전체의 터치 좌표를 오버레이 중심 기준 각도로 계산한다", () => {
+    expect(workspacePointToAngle(310, 180, 210, 180)).toBe(0);
+    expect(workspacePointToAngle(210, 280, 210, 180)).toBe(90);
+    expect(workspacePointToAngle(110, 180, 210, 180)).toBe(180);
+    expect(workspacePointToAngle(210, 80, 210, 180)).toBe(270);
   });
 });

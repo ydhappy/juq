@@ -7,7 +7,7 @@ import { captureRef } from "react-native-view-shot";
 import { AnnotationLayer, type Mark, type MarkKind } from "@/components/annotation-layer";
 import { ProtractorOverlay } from "@/components/protractor-overlay";
 import { ScreenContainer } from "@/components/screen-container";
-import { clampNumber, pointToAngle, scaleFromPinch } from "@/lib/protractor-math";
+import { clampNumber, scaleFromPinch, workspacePointToAngle } from "@/lib/protractor-math";
 
 type Center = { x: number; y: number };
 type MenuMode = "tools" | "note" | null;
@@ -21,6 +21,7 @@ export default function HomeScreen() {
   const [scale, setScale] = useState(0.92);
   const [center, setCenter] = useState<Center>({ x: workspaceSize / 2, y: workspaceSize / 2 });
   const [selectedAngle, setSelectedAngle] = useState<number | null>(null);
+  const [overlayVisible, setOverlayVisible] = useState(true);
   const [menuMode, setMenuMode] = useState<MenuMode>(null);
   const [menuPoint, setMenuPoint] = useState<Center>({ x: workspaceSize / 2, y: workspaceSize / 2 });
   const [noteText, setNoteText] = useState("");
@@ -37,6 +38,14 @@ export default function HomeScreen() {
     }),
     [center, protractorSize, workspaceSize],
   );
+
+  const measureAtWorkspacePoint = (x: number, y: number) => {
+    setSelectedAngle(workspacePointToAngle(x, y, centerForWorkspace.x, centerForWorkspace.y));
+  };
+
+  const handleOverlayTap = (localX: number, localY: number) => {
+    measureAtWorkspacePoint(centerForWorkspace.x - protractorSize / 2 + localX, centerForWorkspace.y - protractorSize / 2 + localY);
+  };
 
   const handleMoveStart = () => {
     moveOrigin.current = centerForWorkspace;
@@ -57,17 +66,11 @@ export default function HomeScreen() {
     setScale(scaleFromPinch(pinchOriginScale.current, startDistance, currentDistance));
   };
 
-  const toWorkspacePoint = (localX: number, localY: number) => ({
-    x: clampNumber(centerForWorkspace.x - protractorSize / 2 + localX, 10, workspaceSize - 10),
-    y: clampNumber(centerForWorkspace.y - protractorSize / 2 + localY, 10, workspaceSize - 10),
-  });
-
-  const handleTap = (localX: number, localY: number) => {
-    setSelectedAngle(pointToAngle(localX, localY, protractorSize / 2, protractorSize / 2));
-  };
-
   const handleLongPress = (localX: number, localY: number) => {
-    setMenuPoint(toWorkspacePoint(localX, localY));
+    setMenuPoint({
+      x: clampNumber(centerForWorkspace.x - protractorSize / 2 + localX, 10, workspaceSize - 10),
+      y: clampNumber(centerForWorkspace.y - protractorSize / 2 + localY, 10, workspaceSize - 10),
+    });
     setMenuMode("tools");
   };
 
@@ -75,6 +78,19 @@ export default function HomeScreen() {
     setMarks((current) => [...current, { id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, kind, x: menuPoint.x, y: menuPoint.y, text }]);
     setMenuMode(null);
     setNoteText("");
+  };
+
+  const placeOverlayAtCenter = () => {
+    setCenter({ x: workspaceSize / 2, y: workspaceSize / 2 });
+    setOverlayVisible(true);
+    setSelectedAngle(null);
+    setMenuMode(null);
+  };
+
+  const removeOverlay = () => {
+    setOverlayVisible(false);
+    setSelectedAngle(null);
+    setMenuMode(null);
   };
 
   const saveCapture = async () => {
@@ -121,21 +137,29 @@ export default function HomeScreen() {
         </View>
 
         <View ref={workspaceRef} collapsable={false} style={[styles.workspace, { width: workspaceSize, height: workspaceSize }]}>
-          <ProtractorOverlay
-            center={centerForWorkspace}
-            size={protractorSize}
-            selectedAngle={selectedAngle}
-            onMoveStart={handleMoveStart}
-            onMove={handleMove}
-            onScaleStart={handleScaleStart}
-            onScale={handleScale}
-            onTap={handleTap}
-            onLongPress={handleLongPress}
+          <Pressable
+            onPress={(event) => measureAtWorkspacePoint(event.nativeEvent.locationX, event.nativeEvent.locationY)}
+            onLongPress={(event) => { setMenuPoint({ x: event.nativeEvent.locationX, y: event.nativeEvent.locationY }); setMenuMode("tools"); }}
+            delayLongPress={430}
+            style={StyleSheet.absoluteFill}
           />
+          {overlayVisible ? (
+            <ProtractorOverlay
+              center={centerForWorkspace}
+              size={protractorSize}
+              selectedAngle={selectedAngle}
+              onMoveStart={handleMoveStart}
+              onMove={handleMove}
+              onScaleStart={handleScaleStart}
+              onScale={handleScale}
+              onTap={handleOverlayTap}
+              onLongPress={handleLongPress}
+            />
+          ) : null}
           <AnnotationLayer marks={marks} />
         </View>
 
-        <Text style={styles.gestureHint}>짧게 터치: 각도 · 드래그: 이동 · 두 손가락: 확대 · 길게 터치: 메뉴</Text>
+        <Text style={styles.gestureHint}>{overlayVisible ? "화면 터치: 각도 · 드래그: 이동 · 두 손가락: 확대 · 길게 터치: 메뉴" : "오버레이가 삭제되었습니다. 길게 터치해 메뉴에서 표시하세요."}</Text>
       </View>
 
       <Modal visible={menuMode !== null} transparent animationType="fade" onRequestClose={() => setMenuMode(null)}>
@@ -151,6 +175,10 @@ export default function HomeScreen() {
                 </View>
                 <View style={styles.menuRow}>
                   <Pressable onPress={() => void saveCapture()} style={({ pressed }) => [styles.menuAction, pressed && styles.pressed]}><Text style={styles.menuActionText}>{isSavingCapture ? "저장 중" : "캡처"}</Text></Pressable>
+                  <Pressable onPress={placeOverlayAtCenter} style={({ pressed }) => [styles.menuAction, pressed && styles.pressed]}><Text style={styles.menuActionText}>가운데</Text></Pressable>
+                  <Pressable onPress={overlayVisible ? removeOverlay : placeOverlayAtCenter} style={({ pressed }) => [styles.menuAction, styles.exitAction, pressed && styles.pressed]}><Text style={[styles.menuActionText, styles.exitActionText]}>{overlayVisible ? "삭제" : "표시"}</Text></Pressable>
+                </View>
+                <View style={styles.menuRow}>
                   <Pressable onPress={closeApp} style={({ pressed }) => [styles.menuAction, styles.exitAction, pressed && styles.pressed]}><Text style={[styles.menuActionText, styles.exitActionText]}>앱 끄기</Text></Pressable>
                 </View>
               </View>
