@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { angleDifference, clampNumber, pointToAngle, snapAngle, wrapAngle } from "../lib/protractor-math";
+import { angleDifference, clampNumber, pointToAngle, scaleFromPinch, snapAngle, wrapAngle } from "../lib/protractor-math";
 
 describe("각도기 수학", () => {
   it("임의의 각도를 0도 이상 360도 미만 범위로 정규화한다", () => {
@@ -27,5 +27,11 @@ describe("각도기 수학", () => {
     expect(pointToAngle(10, 20, 10, 10)).toBe(90);
     expect(pointToAngle(0, 10, 10, 10)).toBe(180);
     expect(pointToAngle(10, 0, 10, 10)).toBe(270);
+  });
+
+  it("두 손가락 간격 비율에 따라 각도기 크기를 안전 범위에서 갱신한다", () => {
+    expect(scaleFromPinch(0.9, 100, 150)).toBeCloseTo(1.18);
+    expect(scaleFromPinch(0.9, 100, 50)).toBeCloseTo(0.55);
+    expect(scaleFromPinch(0.8, 100, 110)).toBeCloseTo(0.88);
   });
 });

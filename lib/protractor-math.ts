@@ -18,3 +18,8 @@ export function pointToAngle(x: number, y: number, centerX: number, centerY: num
   const radians = Math.atan2(y - centerY, x - centerX);
   return wrapAngle((radians * 180) / Math.PI);
 }
+
+export function scaleFromPinch(originScale: number, startDistance: number, currentDistance: number) {
+  if (startDistance <= 0 || currentDistance <= 0) return clampNumber(originScale, 0.55, 1.18);
+  return clampNumber(originScale * (currentDistance / startDistance), 0.55, 1.18);
+}
