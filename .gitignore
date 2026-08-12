@@ -1,66 +1,70 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# Dependencies and build output
 node_modules/
-
-# Expo
-.expo/
 dist/
+build/
+out/
 web-build/
-expo-env.d.ts
+.cache/
 
-# Native
-.kotlin/
-*.orig.*
+# Expo and native generated folders
+.expo/
+expo-env.d.ts
+/ios
+/android
+.metro-health-check*
+
+# Environment variables, keys, and local secrets
+.env
+.env.*
+!.env.example
 *.jks
 *.p8
 *.p12
 *.key
+*.pem
+*.pfx
 *.mobileprovision
+secrets.*
 
-# Metro
-.metro-health-check*
-
-# debug
+# Logs and temporary files
+logs/
+*.log
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+tmp/
+temp/
 
-# macOS
+# Editors and operating systems
 .DS_Store
-*.pem
-
-# local env files
-.env*.local
-
-# typescript
-*.tsbuildinfo
-
-app-example
-
-# generated native folders
-/ios
-/android
-
-# IDE
+Thumbs.db
+Desktop.ini
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# Logs
-logs
-*.log
+# Language and test output
+*.tsbuildinfo
+coverage/
+.coverage
+.pytest_cache/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
 
-# OS
-Thumbs.db
-
-# Build files
+# Local data and archives
+*.db
+*.sqlite
+*.sqlite3
+*.bak
 *.tgz
 *.tar.gz
-.cache/
+*.orig.*
 
-# Webdev artifacts (checkpoint zips, migrations, etc.)
+# Webdev local metadata
 .webdev/
 .project-config.json
+app-example
