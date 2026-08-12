@@ -27,3 +27,8 @@ export function scaleFromPinch(originScale: number, startDistance: number, curre
 export function workspacePointToAngle(x: number, y: number, overlayCenterX: number, overlayCenterY: number) {
   return pointToAngle(x, y, overlayCenterX, overlayCenterY);
 }
+
+export function snapMeasuredAngle(angle: number, step: number) {
+  if (step <= 1) return wrapAngle(Math.round(angle));
+  return wrapAngle(Math.round(angle / step) * step);
+}

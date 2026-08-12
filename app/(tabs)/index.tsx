@@ -8,7 +8,7 @@ import { captureRef } from "react-native-view-shot";
 import { AnnotationLayer, type Mark, type MarkKind } from "@/components/annotation-layer";
 import { ProtractorOverlay } from "@/components/protractor-overlay";
 import { ScreenContainer } from "@/components/screen-container";
-import { clampNumber, scaleFromPinch, workspacePointToAngle } from "@/lib/protractor-math";
+import { clampNumber, scaleFromPinch, snapMeasuredAngle, workspacePointToAngle } from "@/lib/protractor-math";
 
 type Center = { x: number; y: number };
 type MenuMode = "tools" | "note" | null;
@@ -30,6 +30,7 @@ export default function HomeScreen() {
   const [scale, setScale] = useState(0.92);
   const [center, setCenter] = useState<Center>({ x: workspaceSize / 2, y: workspaceSize / 2 });
   const [selectedAngle, setSelectedAngle] = useState<number | null>(null);
+  const [snapStep, setSnapStep] = useState(1);
   const [overlayVisible, setOverlayVisible] = useState(true);
   const [overlayLocked, setOverlayLocked] = useState(false);
   const [menuMode, setMenuMode] = useState<MenuMode>(null);
@@ -37,6 +38,7 @@ export default function HomeScreen() {
   const [noteText, setNoteText] = useState("");
   const [marks, setMarks] = useState<Mark[]>([]);
   const [isSavingCapture, setIsSavingCapture] = useState(false);
+  const [captureNotice, setCaptureNotice] = useState<string | null>(null);
   const [overlayPermissionFlowOpened, setOverlayPermissionFlowOpened] = useState(false);
   const moveOrigin = useRef<Center>(center);
   const pinchOriginScale = useRef(scale);
@@ -65,8 +67,8 @@ export default function HomeScreen() {
 
   const measureAtWorkspacePoint = useCallback((x: number, y: number) => {
     if (!overlayVisible) return;
-    setSelectedAngle(workspacePointToAngle(x, y, centerForWorkspace.x, centerForWorkspace.y));
-  }, [centerForWorkspace.x, centerForWorkspace.y, overlayVisible]);
+    setSelectedAngle(snapMeasuredAngle(workspacePointToAngle(x, y, centerForWorkspace.x, centerForWorkspace.y), snapStep));
+  }, [centerForWorkspace.x, centerForWorkspace.y, overlayVisible, snapStep]);
 
   const showMenuAt = useCallback((x: number, y: number) => {
     setMenuPoint({ x: clampNumber(x, 10, workspaceSize - 10), y: clampNumber(y, 10, workspaceSize - 10) });
@@ -153,11 +155,31 @@ export default function HomeScreen() {
     setNoteText("");
   };
 
+  const removeLastMark = () => {
+    setMarks((current) => current.slice(0, -1));
+    setMenuMode(null);
+  };
+
+  const clearMarks = () => {
+    setMarks([]);
+    setMenuMode(null);
+  };
+
   const placeOverlayAtCenter = () => {
     setCenter({ x: workspaceSize / 2, y: workspaceSize / 2 });
     setOverlayVisible(true);
     setOverlayLocked(false);
     setSelectedAngle(null);
+    setMenuMode(null);
+  };
+
+  const resetWorkspace = () => {
+    setCenter({ x: workspaceSize / 2, y: workspaceSize / 2 });
+    setScale(0.92);
+    setOverlayVisible(true);
+    setOverlayLocked(false);
+    setSelectedAngle(null);
+    setMarks([]);
     setMenuMode(null);
   };
 
@@ -170,22 +192,27 @@ export default function HomeScreen() {
 
   const saveCapture = async () => {
     if (Platform.OS === "web") {
+      setCaptureNotice("캡처 저장은 Android 또는 iOS 기기에서 지원됩니다.");
       Alert.alert("모바일 기기에서 지원", "캡처 저장은 Android 또는 iOS 기기에서 사용할 수 있습니다.");
       return;
     }
     if (!workspaceRef.current || isSavingCapture) return;
     setIsSavingCapture(true);
+    setCaptureNotice("캡처를 저장하는 중입니다…");
     try {
       const permission = await MediaLibrary.requestPermissionsAsync();
       if (!permission.granted) {
+        setCaptureNotice("사진 보관함 권한이 필요합니다.");
         Alert.alert("사진 권한 필요", "캡처 이미지를 기기에 저장하려면 사진 보관함 권한을 허용해 주세요.");
         return;
       }
       const uri = await captureRef(workspaceRef, { format: "png", quality: 1, result: "tmpfile" });
       await MediaLibrary.saveToLibraryAsync(uri);
+      setCaptureNotice("캡처를 사진 보관함에 저장했습니다.");
       Alert.alert("캡처 저장 완료", "현재 각도기 오버레이를 사진 보관함에 저장했습니다.");
       setMenuMode(null);
     } catch {
+      setCaptureNotice("캡처 저장에 실패했습니다. 권한과 저장 공간을 확인해 주세요.");
       Alert.alert("캡처 실패", "저장 중 문제가 발생했습니다. 권한과 저장 공간을 확인해 주세요.");
     } finally {
       setIsSavingCapture(false);
@@ -226,6 +253,7 @@ export default function HomeScreen() {
           <Text style={styles.measureValue}>{selectedAngle === null ? "—°" : `${Math.round(selectedAngle)}°`}</Text>
           {overlayLocked ? <View style={styles.lockBadge}><Text style={styles.lockBadgeText}>오버레이 잠금</Text></View> : null}
           {overlayPermissionFlowOpened ? <Text style={styles.permissionHint}>다른 앱 위 표시 권한을 설정한 뒤 APK에서 사용하세요.</Text> : null}
+          {captureNotice ? <Text style={styles.captureHint}>{captureNotice}</Text> : null}
         </View>
 
         <View ref={workspaceRef} collapsable={false} {...workspacePanResponder.panHandlers} style={[styles.workspace, { width: workspaceSize, height: workspaceSize }]}>
@@ -233,7 +261,7 @@ export default function HomeScreen() {
           <AnnotationLayer marks={marks} />
         </View>
 
-        <Text style={styles.gestureHint}>{overlayVisible ? overlayLocked ? "잠금됨: 측정만 가능 · 길게 터치해 해제" : "화면 어디든 터치: 각도 · 드래그: 이동 · 두 손가락: 확대 · 길게 터치: 메뉴" : "오버레이가 삭제되었습니다. 길게 터치해 메뉴에서 표시하세요."}</Text>
+        <Text style={styles.gestureHint}>{overlayVisible ? overlayLocked ? `잠금됨 · ${snapStep}° 스냅 측정 · 길게 터치해 해제` : `화면 어디든 터치: ${snapStep}° 스냅 · 드래그: 이동 · 두 손가락: 확대` : "오버레이가 삭제되었습니다. 길게 터치해 메뉴에서 표시하세요."}</Text>
       </View>
 
       <Modal visible={menuMode !== null} transparent animationType="fade" onRequestClose={() => setMenuMode(null)}>
@@ -248,12 +276,21 @@ export default function HomeScreen() {
                   <Pressable onPress={() => addMark("circle")} style={({ pressed }) => [styles.menuAction, pressed && styles.pressed]}><Text style={styles.menuActionText}>원형</Text></Pressable>
                 </View>
                 <View style={styles.menuRow}>
+                  <Pressable disabled={marks.length === 0} onPress={removeLastMark} style={({ pressed }) => [styles.menuAction, marks.length === 0 && styles.disabledAction, pressed && styles.pressed]}><Text style={styles.menuActionText}>마지막 취소</Text></Pressable>
+                  <Pressable disabled={marks.length === 0} onPress={clearMarks} style={({ pressed }) => [styles.menuAction, styles.exitAction, marks.length === 0 && styles.disabledAction, pressed && styles.pressed]}><Text style={[styles.menuActionText, styles.exitActionText]}>주석 전체 지우기</Text></Pressable>
+                </View>
+                <Text style={styles.menuSectionLabel}>측정 스냅</Text>
+                <View style={styles.menuRow}>
+                  {[1, 5, 10].map((value) => <Pressable key={value} onPress={() => { setSnapStep(value); setMenuMode(null); }} style={({ pressed }) => [styles.menuAction, snapStep === value && styles.activeSnapAction, pressed && styles.pressed]}><Text style={[styles.menuActionText, snapStep === value && styles.activeSnapText]}>{value}°</Text></Pressable>)}
+                </View>
+                <View style={styles.menuRow}>
                   <Pressable onPress={() => void saveCapture()} style={({ pressed }) => [styles.menuAction, pressed && styles.pressed]}><Text style={styles.menuActionText}>{isSavingCapture ? "저장 중" : "캡처"}</Text></Pressable>
                   <Pressable onPress={placeOverlayAtCenter} style={({ pressed }) => [styles.menuAction, pressed && styles.pressed]}><Text style={styles.menuActionText}>가운데</Text></Pressable>
                   <Pressable onPress={overlayVisible ? removeOverlay : placeOverlayAtCenter} style={({ pressed }) => [styles.menuAction, styles.exitAction, pressed && styles.pressed]}><Text style={[styles.menuActionText, styles.exitActionText]}>{overlayVisible ? "삭제" : "표시"}</Text></Pressable>
                 </View>
                 <View style={styles.menuRow}>
                   <Pressable onPress={() => { setOverlayLocked((current) => !current); setMenuMode(null); }} style={({ pressed }) => [styles.menuAction, overlayLocked && styles.lockAction, pressed && styles.pressed]}><Text style={[styles.menuActionText, overlayLocked && styles.lockActionText]}>{overlayLocked ? "잠금 해제" : "오버레이 잠금"}</Text></Pressable>
+                  <Pressable onPress={resetWorkspace} style={({ pressed }) => [styles.menuAction, pressed && styles.pressed]}><Text style={styles.menuActionText}>전체 초기화</Text></Pressable>
                 </View>
                 <View style={styles.menuRow}>
                   <Pressable onPress={() => void openOverlayPermissionSettings()} style={({ pressed }) => [styles.menuAction, styles.permissionAction, pressed && styles.pressed]}><Text style={styles.permissionActionText}>다른 앱 위 표시 권한</Text></Pressable>
@@ -286,11 +323,13 @@ const styles = StyleSheet.create({
   lockBadge: { borderRadius: 9, backgroundColor: "rgba(255,159,28,0.20)", borderWidth: 1, borderColor: "rgba(255,159,28,0.72)", marginTop: 3, paddingHorizontal: 8, paddingVertical: 3 },
   lockBadgeText: { color: "#FFB84D", fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
   permissionHint: { color: "rgba(247,250,252,0.65)", fontSize: 9, lineHeight: 12, fontWeight: "600", marginTop: 3, textAlign: "center" },
+  captureHint: { color: "#9CEFF5", fontSize: 10, lineHeight: 13, fontWeight: "700", marginTop: 3, textAlign: "center" },
   workspace: { position: "relative", overflow: "visible", backgroundColor: "transparent" },
   gestureHint: { color: "rgba(247,250,252,0.72)", fontSize: 10, lineHeight: 14, fontWeight: "700", textAlign: "center", paddingHorizontal: 12 },
   modalBackdrop: { flex: 1, justifyContent: "flex-end", alignItems: "center", backgroundColor: "rgba(0,0,0,0.20)", paddingBottom: 28 },
   menuCard: { width: "76%", maxWidth: 280, borderRadius: 16, backgroundColor: "rgba(247,250,252,0.98)", padding: 10, shadowColor: "#000000", shadowOpacity: 0.22, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 8 },
   menuTitle: { color: INK, fontSize: 14, fontWeight: "800", marginBottom: 8, textAlign: "center" },
+  menuSectionLabel: { color: "#60727E", fontSize: 10, fontWeight: "800", letterSpacing: 0.4, marginTop: 10, textTransform: "uppercase" },
   menuRow: { flexDirection: "row", gap: 7, marginTop: 7 },
   menuAction: { flex: 1, minHeight: 38, borderRadius: 10, borderWidth: 1, borderColor: "#D4DEE4", alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
   menuActionText: { color: INK, fontSize: 12, fontWeight: "800" },
@@ -300,6 +339,9 @@ const styles = StyleSheet.create({
   lockActionText: { color: "#9C6100" },
   permissionAction: { borderColor: "#84BFD0", backgroundColor: "#EAF8FC" },
   permissionActionText: { color: "#075B73", fontSize: 12, fontWeight: "800" },
+  activeSnapAction: { borderColor: "#00AABE", backgroundColor: "#DFF9FC" },
+  activeSnapText: { color: "#075B73" },
+  disabledAction: { opacity: 0.42 },
   noteInput: { minHeight: 68, maxHeight: 92, borderRadius: 10, borderWidth: 1, borderColor: "#D4DEE4", backgroundColor: "#FFFFFF", color: INK, fontSize: 14, lineHeight: 19, paddingHorizontal: 10, paddingVertical: 8, textAlignVertical: "top" },
   saveNoteButton: { minHeight: 38, borderRadius: 10, backgroundColor: INK, alignItems: "center", justifyContent: "center", marginTop: 8 },
   saveNoteText: { color: PAPER, fontSize: 13, fontWeight: "800" },
