@@ -16,7 +16,7 @@ interface AnnotationLayerProps {
 
 export function AnnotationLayer({ marks }: AnnotationLayerProps) {
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+    <View style={[StyleSheet.absoluteFill, styles.nonInteractive]}>
       {marks.map((mark) => {
         if (mark.kind === "note") {
           return (
@@ -32,6 +32,7 @@ export function AnnotationLayer({ marks }: AnnotationLayerProps) {
 }
 
 const styles = StyleSheet.create({
+  nonInteractive: { pointerEvents: "none" },
   shape: { position: "absolute", borderWidth: 3 },
   rectangle: { width: 92, height: 62, borderRadius: 6, borderColor: "#00C2D1", backgroundColor: "rgba(0,194,209,0.10)" },
   circle: { width: 72, height: 72, borderRadius: 36, borderColor: "#FF9F1C", backgroundColor: "rgba(255,159,28,0.10)" },

@@ -73,6 +73,14 @@ const config: ExpoConfig = {
   plugins: [
     "expo-router",
     [
+      "expo-media-library",
+      {
+        photosPermission: "Allow $(PRODUCT_NAME) to save protractor captures to your photo library.",
+        savePhotosPermission: "Allow $(PRODUCT_NAME) to save protractor captures to your photo library.",
+        isAccessMediaLocationEnabled: false,
+      },
+    ],
+    [
       "expo-splash-screen",
       {
         image: "./assets/images/splash-icon.png",
