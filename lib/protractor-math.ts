@@ -1,0 +1,15 @@
+export function wrapAngle(angle: number) {
+  return ((angle % 360) + 360) % 360;
+}
+
+export function angleDifference(baseAngle: number, measureAngle: number) {
+  return wrapAngle(measureAngle - baseAngle);
+}
+
+export function clampNumber(value: number, minimum: number, maximum: number) {
+  return Math.min(Math.max(value, minimum), maximum);
+}
+
+export function snapAngle(currentAngle: number, direction: number, step: number) {
+  return wrapAngle(currentAngle + direction * step);
+}
