@@ -64,6 +64,7 @@ const config: ExpoConfig = {
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     package: env.androidPackage,
+    permissions: ["SYSTEM_ALERT_WINDOW"],
   },
   web: {
     bundler: "metro",

@@ -1,4 +1,5 @@
 import * as MediaLibrary from "expo-media-library";
+import * as IntentLauncher from "expo-intent-launcher";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Alert, BackHandler, Modal, PanResponder, Platform, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
@@ -15,6 +16,7 @@ type MenuMode = "tools" | "note" | null;
 const INK = "#0D1B2A";
 const PAPER = "#F7FAFC";
 const LONG_PRESS_MS = 430;
+const ANDROID_PACKAGE = "com.app.juq";
 
 function touchDistance(touches: readonly { pageX: number; pageY: number }[]) {
   if (touches.length < 2) return 0;
@@ -35,6 +37,7 @@ export default function HomeScreen() {
   const [noteText, setNoteText] = useState("");
   const [marks, setMarks] = useState<Mark[]>([]);
   const [isSavingCapture, setIsSavingCapture] = useState(false);
+  const [overlayPermissionFlowOpened, setOverlayPermissionFlowOpened] = useState(false);
   const moveOrigin = useRef<Center>(center);
   const pinchOriginScale = useRef(scale);
   const gestureStart = useRef<Center>({ x: 0, y: 0 });
@@ -198,6 +201,21 @@ export default function HomeScreen() {
     Alert.alert("앱 종료", "iOS에서는 운영체제 정책상 앱을 직접 종료할 수 없습니다. 홈 화면으로 이동해 주세요.");
   };
 
+  const openOverlayPermissionSettings = async () => {
+    if (Platform.OS !== "android") {
+      Alert.alert("Android 전용 기능", "다른 앱 위 표시는 Android APK에서만 설정할 수 있습니다.");
+      return;
+    }
+    try {
+      await IntentLauncher.startActivityAsync(IntentLauncher.ActivityAction.MANAGE_OVERLAY_PERMISSION, {
+        data: `package:${ANDROID_PACKAGE}`,
+      });
+      setOverlayPermissionFlowOpened(true);
+    } catch {
+      Alert.alert("설정 화면을 열 수 없음", "Android 설정에서 Juq 360의 ‘다른 앱 위에 표시’를 직접 허용해 주세요.");
+    }
+  };
+
   return (
     <ScreenContainer edges={["top", "bottom", "left", "right"]} containerClassName="bg-background" safeAreaClassName="bg-background">
       <StatusBar style="light" />
@@ -207,6 +225,7 @@ export default function HomeScreen() {
           <Text style={styles.measureLabel}>측정 각도</Text>
           <Text style={styles.measureValue}>{selectedAngle === null ? "—°" : `${Math.round(selectedAngle)}°`}</Text>
           {overlayLocked ? <View style={styles.lockBadge}><Text style={styles.lockBadgeText}>오버레이 잠금</Text></View> : null}
+          {overlayPermissionFlowOpened ? <Text style={styles.permissionHint}>다른 앱 위 표시 권한을 설정한 뒤 APK에서 사용하세요.</Text> : null}
         </View>
 
         <View ref={workspaceRef} collapsable={false} {...workspacePanResponder.panHandlers} style={[styles.workspace, { width: workspaceSize, height: workspaceSize }]}>
@@ -237,6 +256,9 @@ export default function HomeScreen() {
                   <Pressable onPress={() => { setOverlayLocked((current) => !current); setMenuMode(null); }} style={({ pressed }) => [styles.menuAction, overlayLocked && styles.lockAction, pressed && styles.pressed]}><Text style={[styles.menuActionText, overlayLocked && styles.lockActionText]}>{overlayLocked ? "잠금 해제" : "오버레이 잠금"}</Text></Pressable>
                 </View>
                 <View style={styles.menuRow}>
+                  <Pressable onPress={() => void openOverlayPermissionSettings()} style={({ pressed }) => [styles.menuAction, styles.permissionAction, pressed && styles.pressed]}><Text style={styles.permissionActionText}>다른 앱 위 표시 권한</Text></Pressable>
+                </View>
+                <View style={styles.menuRow}>
                   <Pressable onPress={closeApp} style={({ pressed }) => [styles.menuAction, styles.exitAction, pressed && styles.pressed]}><Text style={[styles.menuActionText, styles.exitActionText]}>앱 끄기</Text></Pressable>
                 </View>
               </View>
@@ -263,6 +285,7 @@ const styles = StyleSheet.create({
   measureValue: { color: PAPER, fontSize: 54, lineHeight: 61, fontWeight: "800", letterSpacing: -1.8 },
   lockBadge: { borderRadius: 9, backgroundColor: "rgba(255,159,28,0.20)", borderWidth: 1, borderColor: "rgba(255,159,28,0.72)", marginTop: 3, paddingHorizontal: 8, paddingVertical: 3 },
   lockBadgeText: { color: "#FFB84D", fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
+  permissionHint: { color: "rgba(247,250,252,0.65)", fontSize: 9, lineHeight: 12, fontWeight: "600", marginTop: 3, textAlign: "center" },
   workspace: { position: "relative", overflow: "visible", backgroundColor: "transparent" },
   gestureHint: { color: "rgba(247,250,252,0.72)", fontSize: 10, lineHeight: 14, fontWeight: "700", textAlign: "center", paddingHorizontal: 12 },
   modalBackdrop: { flex: 1, justifyContent: "flex-end", alignItems: "center", backgroundColor: "rgba(0,0,0,0.20)", paddingBottom: 28 },
@@ -275,6 +298,8 @@ const styles = StyleSheet.create({
   exitActionText: { color: "#C83E37" },
   lockAction: { borderColor: "#E1AC50", backgroundColor: "#FFF7E8" },
   lockActionText: { color: "#9C6100" },
+  permissionAction: { borderColor: "#84BFD0", backgroundColor: "#EAF8FC" },
+  permissionActionText: { color: "#075B73", fontSize: 12, fontWeight: "800" },
   noteInput: { minHeight: 68, maxHeight: 92, borderRadius: 10, borderWidth: 1, borderColor: "#D4DEE4", backgroundColor: "#FFFFFF", color: INK, fontSize: 14, lineHeight: 19, paddingHorizontal: 10, paddingVertical: 8, textAlignVertical: "top" },
   saveNoteButton: { minHeight: 38, borderRadius: 10, backgroundColor: INK, alignItems: "center", justifyContent: "center", marginTop: 8 },
   saveNoteText: { color: PAPER, fontSize: 13, fontWeight: "800" },
