@@ -16,6 +16,18 @@ ChatGPT/Codex와 GitHub를 연동하여 프로젝트를 개발·검토·관리�
 - 읽기·쓰기·관리자 권한 확인 완료
 - ChatGPT GitHub 커넥터 연결 확인 완료
 
-## 다음 단계
+## Juq 360 앱
 
-프로젝트 소스, 기술 스택, 빌드 및 테스트 방법이 정해지면 저장소 구조와 CI 설정을 확장합니다.
+Juq는 투명한 0~360도 각도기 오버레이, 짧은 터치 방향 측정, 드래그 이동, 핀치 확대·축소, 긴 터치 메모·도형 메뉴와 캡처 저장 기능을 제공하는 Expo 기반 모바일 앱입니다.
+
+| 항목 | 실행 방법 |
+| --- | --- |
+| 개발 서버 | `pnpm dev` |
+| 단위 테스트 | `pnpm test` |
+| 타입 검사 | `pnpm check` |
+| 정적 검사 | `pnpm lint` |
+| APK 빌드 | `pnpm apk:build` |
+
+## Android APK 빌드
+
+`main` 브랜치에 푸시하거나 Actions 탭에서 **Build Android APK** 워크플로를 수동 실행하면 EAS의 `preview` 프로필로 APK 빌드를 요청합니다. GitHub Actions에서 빌드를 실행하려면 저장소 **Settings → Secrets and variables → Actions**에 Expo 계정에서 생성한 `EXPO_TOKEN`을 추가해야 합니다. 빌드가 완료되면 EAS 빌드 페이지에서 APK를 내려받을 수 있습니다.
